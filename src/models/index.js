@@ -1,80 +1,80 @@
-const { Sequelize } = require('sequelize');
-const path = require('path');
-require('dotenv').config();
+const mongoose = require("mongoose");
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: path.join(__dirname, '../../database.sqlite'),
-  logging: false,
-});
+const ticketSchema = new mongoose.Schema(
+  {
+    titulo: {
+      type: String,
+      required: [true, "El título es obligatorio"],
+      trim: true,
+      minlength: [4, "El título debe tener mínimo 4 caracteres"],
+      maxlength: [150, "El título no puede superar 150 caracteres"],
+    },
 
-// MODELOS BÁSICOS
-const Usuario = sequelize.define('Usuario', {
-  id: {
-    type: Sequelize.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  nombre: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  email: {
-    type: Sequelize.STRING,
-    allowNull: false,
-    unique: true,
-  },
-  password: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  rol: {
-    type: Sequelize.ENUM('usuario_final', 'tecnico', 'administrador'),
-    defaultValue: 'usuario_final',
-  },
-  departamento: Sequelize.STRING,
-  estado: {
-    type: Sequelize.STRING,
-    defaultValue: 'activo',
-  },
-}, {
-  timestamps: true,
-  tableName: 'usuarios',
-});
+    descripcion: {
+      type: String,
+      required: [true, "La descripción es obligatoria"],
+      trim: true,
+      minlength: [
+        10,
+        "La descripción debe tener mínimo 10 caracteres",
+      ],
+      maxlength: [
+        500,
+        "La descripción no puede superar 500 caracteres",
+      ],
+    },
 
-const Ticket = sequelize.define('Ticket', {
-  id: {
-    type: Sequelize.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  numero: {
-    type: Sequelize.STRING,
-    unique: true,
-  },
-  titulo: Sequelize.STRING,
-  descripcion: Sequelize.TEXT,
-  categoria: Sequelize.STRING,
-  estado: {
-    type: Sequelize.STRING,
-    defaultValue: 'abierto',
-  },
-  prioridad: {
-    type: Sequelize.STRING,
-    defaultValue: 'media',
-  },
-}, {
-  timestamps: true,
-  tableName: 'tickets',
-});
+    categoria: {
+      type: String,
+      required: true,
+      enum: {
+        values: ["Red", "Hardware", "Software"],
+        message: "Categoría no válida",
+      },
+      default: "Software",
+    },
 
-// Relaciones
-Usuario.hasMany(Ticket, { foreignKey: 'usuario_reportante_id' });
-Ticket.belongsTo(Usuario, { foreignKey: 'usuario_reportante_id', as: 'usuarioReportante' });
+    prioridad: {
+      type: String,
+      required: true,
+      enum: {
+        values: ["Alta", "Media", "Baja"],
+        message: "Prioridad no válida",
+      },
+      default: "Media",
+    },
+
+    estado: {
+      type: String,
+      required: true,
+      enum: {
+        values: ["Abierto", "En Progreso", "Cerrado"],
+        message: "Estado no válido",
+      },
+      default: "Abierto",
+    },
+  },
+  {
+    timestamps: true,
+    collection: "tickets",
+    versionKey: false,
+
+    toJSON: {
+      transform: (documento, objeto) => {
+        objeto.id = objeto._id.toString();
+
+        delete objeto._id;
+
+        return objeto;
+      },
+    },
+  }
+);
+
+const Ticket =
+  mongoose.models.Ticket ||
+  mongoose.model("Ticket", ticketSchema);
 
 module.exports = {
-  sequelize,
-  Sequelize,
-  Usuario,
   Ticket,
 };

@@ -1,23 +1,20 @@
 {
-  "name": "proyectohelpdesk_alexandra",
+  "name": "proyecto-helpdesk-alexandra",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "main": "src/index.js",
   "scripts": {
-  "start": "node src/index.js",
-  "dev": "nodemon src/index.js",
-  "test": "echo error"
-},
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "nodemon": "^3.1.14",
-    "sequelize": "^6.37.8",
-    "sqlite3": "^6.0.1"
+    "mongoose": "^9.9.1",
+    "pg": "^8.0.0",
+    "pg-hstore": "^2.0.0",
+    "sequelize": "^6.0.0",
+    "sqlite3": "^5.0.0"
   }
 }

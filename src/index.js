@@ -1,58 +1,229 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+require("dotenv").config();
 
-const { sequelize } = require('./models');
-const routes = require('./routes');
-const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-const environment = require('./config/environment');
+const express = require("express");
+const cors = require("cors");
+
+const conectarMongoDB =
+  require("./config/database");
+
+const routes = require("./routes");
 
 const app = express();
 
-app.use(cors({
-  origin: environment.cors.origin,
-  credentials: true,
-}));
+const PORT =
+  Number(process.env.PORT) || 4000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const HOST = "0.0.0.0";
 
-app.get('/', (req, res) => {
-  res.json({
+
+// =====================================
+// CORS
+// =====================================
+
+const normalizarOrigen = (origen) =>
+  String(origen || "")
+    .trim()
+    .replace(/\/+$/, "");
+
+
+const origenesPermitidos = [
+  "http://localhost:5173",
+
+  ...String(
+    process.env.FRONTEND_URL || ""
+  )
+    .split(",")
+    .map(normalizarOrigen),
+].filter(Boolean);
+
+
+app.use(
+  cors({
+    origin(origen, callback) {
+      // Permite Postman y solicitudes sin Origin
+      if (!origen) {
+        return callback(null, true);
+      }
+
+      const origenNormalizado =
+        normalizarOrigen(origen);
+
+      if (
+        origenesPermitidos.includes(
+          origenNormalizado
+        )
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(
+          `Origen no permitido por CORS: ${origen}`
+        )
+      );
+    },
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
+  })
+);
+
+
+// =====================================
+// SEGURIDAD Y MIDDLEWARE
+// =====================================
+
+app.disable("x-powered-by");
+
+
+app.use(
+  express.json({
+    limit: "20kb",
+  })
+);
+
+
+app.use(
+  express.urlencoded({
+    extended: false,
+    limit: "20kb",
+  })
+);
+
+
+app.use((req, res, next) => {
+  res.setHeader(
+    "X-Content-Type-Options",
+    "nosniff"
+  );
+
+  res.setHeader(
+    "X-Frame-Options",
+    "DENY"
+  );
+
+  res.setHeader(
+    "Referrer-Policy",
+    "no-referrer"
+  );
+
+  next();
+});
+
+
+// =====================================
+// RUTA PRINCIPAL
+// =====================================
+
+app.get("/", (req, res) => {
+  res.status(200).json({
     success: true,
-    message: 'Bienvenido a Help Desk API',
-    version: '1.0.0',
+    message:
+      "API del Sistema Help Desk funcionando correctamente",
+    database: "MongoDB Atlas",
   });
 });
 
-app.use('/api', routes);
 
-app.use(notFoundHandler);
-app.use(errorHandler);
+// =====================================
+// API
+// =====================================
+
+app.use("/api", routes);
+
+
+// =====================================
+// RUTA NO ENCONTRADA
+// =====================================
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Ruta no encontrada",
+  });
+});
+
+
+// =====================================
+// MANEJO DE ERRORES
+// =====================================
+
+app.use((error, req, res, next) => {
+  console.error(
+    "Error del servidor:",
+    error.message
+  );
+
+  if (
+    error.message?.includes(
+      "Origen no permitido por CORS"
+    )
+  ) {
+    return res.status(403).json({
+      success: false,
+      message:
+        "El origen de la solicitud no está autorizado.",
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message:
+      "Se produjo un error interno en el servidor.",
+  });
+});
+
+
+// =====================================
+// INICIAR SERVIDOR
+// =====================================
 
 const iniciarServidor = async () => {
   try {
-    await sequelize.sync({ alter: true });
-    console.log('✅ Base de datos sincronizada');
+    await conectarMongoDB();
 
-    const PORT = environment.port;
-    app.listen(PORT, () => {
-      console.log('');
-      console.log('╔════════════════════════════════════════╗');
-      console.log('║   🚀 SERVIDOR INICIADO CORRECTAMENTE   🚀 ║');
-      console.log('╚════════════════════════════════════════╝');
-      console.log('');
-      console.log(`📍 Puerto: http://localhost:${PORT}`);
-      console.log(`📖 API: http://localhost:${PORT}/api`);
-      console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
-      console.log('');
+    app.listen(PORT, HOST, () => {
+      console.log("");
+      console.log(
+        "🚀 SERVIDOR INICIADO CORRECTAMENTE"
+      );
+
+      console.log(
+        `📍 Servidor: http://localhost:${PORT}`
+      );
+
+      console.log(
+        `📖 Tickets: http://localhost:${PORT}/api/tickets`
+      );
+
+      console.log(
+        `💗 Health: http://localhost:${PORT}/api/health`
+      );
+
+      console.log(
+        "🍃 Base de datos: MongoDB Atlas"
+      );
+
+      console.log("");
     });
   } catch (error) {
-    console.error('❌ Error al iniciar servidor:', error);
-    process.exit(1);
+    console.error(
+      "❌ No fue posible iniciar el servidor."
+    );
+
+    process.exitCode = 1;
   }
 };
 
-iniciarServidor();
 
-module.exports = app;
+iniciarServidor();

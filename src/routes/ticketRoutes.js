@@ -1,13 +1,23 @@
-const express = require('express');
-const router = express.Router();
-const ticketController = require('../controllers/TicketController');
+const express = require("express");
 
-// Rutas de tickets
-router.get('/', ticketController.obtenerTickets);
-router.get('/stats/general', ticketController.obtenerEstadisticas);
-router.get('/:id', ticketController.obtenerTicketPorId);
-router.post('/', ticketController.crearTicket);
-router.put('/:id', ticketController.actualizarTicket);
-router.delete('/:id', ticketController.eliminarTicket);
+const {
+  obtenerTickets,
+  obtenerTicketPorId,
+  crearTicket,
+  actualizarTicket,
+  eliminarTicket,
+} = require("../controllers/TicketController");
+
+const router = express.Router();
+
+router.get("/", obtenerTickets);
+
+router.get("/:id", obtenerTicketPorId);
+
+router.post("/", crearTicket);
+
+router.put("/:id", actualizarTicket);
+
+router.delete("/:id", eliminarTicket);
 
 module.exports = router;

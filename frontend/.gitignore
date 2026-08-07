@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+frontend/node_modules/
+
+# Variables privadas
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Bases de datos locales
+database.sqlite
+database-respaldo.sqlite
+*.sqlite-journal
+
+# Compilaciones
+dist/
+frontend/dist/
+
+# Registros
+*.log
+npm-debug.log*
+
+# Sistema operativo y editor
+.DS_Store
+Thumbs.db
+.vscode/

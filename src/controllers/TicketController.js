@@ -1,199 +1,275 @@
-const { Ticket, Usuario } = require('../models');
+const mongoose = require("mongoose");
 
-// GET - Obtener todos los tickets
+const { Ticket } = require("../models");
+
+const {
+  validarDatosTicket,
+} = require("../utils/ticketSecurity");
+
+
+// =====================================
+// GET /api/tickets
+// =====================================
+
 exports.obtenerTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.findAll({
-      include: [{
-        model: Usuario,
-        as: 'usuarioReportante',
-        attributes: ['id', 'nombre', 'email'],
-      }],
+    const tickets = await Ticket.find().sort({
+      createdAt: -1,
     });
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      message: 'Tickets obtenidos exitosamente',
+      message: "Tickets obtenidos correctamente",
       data: tickets,
-      pagination: {
-        total: tickets.length,
-        pages: 1,
-        currentPage: 1,
-      },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(
+      "Error al obtener los tickets:",
+      error
+    );
+
+    return res.status(500).json({
       success: false,
-      message: 'Error al obtener tickets',
-      error: error.message,
+      message:
+        "No se pudieron obtener los tickets.",
     });
   }
 };
 
-// GET - Obtener ticket por ID
-exports.obtenerTicketPorId = async (req, res) => {
+
+// =====================================
+// GET /api/tickets/:id
+// =====================================
+
+exports.obtenerTicketPorId = async (
+  req,
+  res
+) => {
   try {
     const { id } = req.params;
-    const ticket = await Ticket.findByPk(id, {
-      include: [{
-        model: Usuario,
-        as: 'usuarioReportante',
-        attributes: ['id', 'nombre', 'email'],
-      }],
-    });
 
-    if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ticket no encontrado',
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Ticket obtenido',
-      data: ticket,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener ticket',
-      error: error.message,
-    });
-  }
-};
-
-// POST - Crear nuevo ticket
-exports.crearTicket = async (req, res) => {
-  try {
-    const { titulo, descripcion, categoria, usuarioReportanteId, prioridad } = req.body;
-
-    // Validaciones
-    if (!titulo || !descripcion || !usuarioReportanteId) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Faltan campos requeridos',
+        message:
+          "El identificador del ticket no es válido.",
       });
     }
 
-    // Generar número de ticket
-    const ultimoTicket = await Ticket.findOne({
-      order: [['id', 'DESC']],
-    });
-    const numeroTicket = `TK-${String((ultimoTicket?.id || 0) + 1).padStart(5, '0')}`;
-
-    const ticket = await Ticket.create({
-      numero: numeroTicket,
-      titulo,
-      descripcion,
-      categoria: categoria || 'general',
-      usuarioReportanteId,
-      prioridad: prioridad || 'media',
-      estado: 'abierto',
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Ticket creado exitosamente, mensaje adicional.',
-      data: ticket,
-      timestamp: new Date(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error al crear ticket',
-      error: error.message,
-    });
-  }
-};
-
-// PUT - Actualizar ticket
-exports.actualizarTicket = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { titulo, descripcion, categoria, prioridad, estado } = req.body;
-
-    const ticket = await Ticket.findByPk(id);
+    const ticket = await Ticket.findById(id);
 
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket no encontrado',
+        message: "Ticket no encontrado.",
       });
     }
 
-    await ticket.update({
-      titulo: titulo || ticket.titulo,
-      descripcion: descripcion || ticket.descripcion,
-      categoria: categoria || ticket.categoria,
-      prioridad: prioridad || ticket.prioridad,
-      estado: estado || ticket.estado,
-    });
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      message: 'Ticket actualizado',
+      message: "Ticket obtenido correctamente",
       data: ticket,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(
+      "Error al obtener el ticket:",
+      error
+    );
+
+    return res.status(500).json({
       success: false,
-      message: 'Error al actualizar ticket',
-      error: error.message,
+      message:
+        "No se pudo obtener el ticket.",
     });
   }
 };
 
-// DELETE - Eliminar ticket
-exports.eliminarTicket = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const ticket = await Ticket.findByPk(id);
 
-    if (!ticket) {
-      return res.status(404).json({
+// =====================================
+// POST /api/tickets
+// =====================================
+
+exports.crearTicket = async (req, res) => {
+  try {
+    const validacion =
+      validarDatosTicket(req.body);
+
+    if (!validacion.valido) {
+      return res.status(400).json({
         success: false,
-        message: 'Ticket no encontrado',
+        message: validacion.errores[0],
+        errors: validacion.errores,
       });
     }
 
-    await ticket.destroy();
+    const nuevoTicket =
+      await Ticket.create(
+        validacion.datos
+      );
 
-    res.json({
+    return res.status(201).json({
       success: true,
-      message: 'Ticket eliminado',
+      message:
+        "Ticket registrado correctamente.",
+      data: nuevoTicket,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(
+      "Error al crear ticket:",
+      error
+    );
+
+    if (error.name === "ValidationError") {
+      const errores = Object.values(
+        error.errors
+      ).map((item) => item.message);
+
+      return res.status(400).json({
+        success: false,
+        message:
+          errores[0] ||
+          "Los datos del ticket no son válidos.",
+        errors: errores,
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: 'Error al eliminar ticket',
-      error: error.message,
+      message:
+        "No se pudo registrar el ticket.",
     });
   }
 };
 
-// GET - Estadísticas
-exports.obtenerEstadisticas = async (req, res) => {
-  try {
-    const total = await Ticket.count();
-    const abiertos = await Ticket.count({ where: { estado: 'abierto' } });
-    const resueltos = await Ticket.count({ where: { estado: 'resuelto' } });
 
-    res.json({
+// =====================================
+// PUT /api/tickets/:id
+// =====================================
+
+exports.actualizarTicket = async (
+  req,
+  res
+) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "El identificador del ticket no es válido.",
+      });
+    }
+
+    const validacion =
+      validarDatosTicket(req.body, {
+        parcial: true,
+      });
+
+    if (!validacion.valido) {
+      return res.status(400).json({
+        success: false,
+        message: validacion.errores[0],
+        errors: validacion.errores,
+      });
+    }
+
+    const ticketActualizado =
+      await Ticket.findByIdAndUpdate(
+        id,
+        validacion.datos,
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+    if (!ticketActualizado) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket no encontrado.",
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: 'Estadísticas obtenidas',
-      data: {
-        total,
-        abiertos,
-        resueltos,
-        cerrados: await Ticket.count({ where: { estado: 'cerrado' } }),
-      },
+      message:
+        "Ticket actualizado correctamente.",
+      data: ticketActualizado,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(
+      "Error al actualizar ticket:",
+      error
+    );
+
+    if (error.name === "ValidationError") {
+      const errores = Object.values(
+        error.errors
+      ).map((item) => item.message);
+
+      return res.status(400).json({
+        success: false,
+        message:
+          errores[0] ||
+          "Los datos no son válidos.",
+        errors: errores,
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: 'Error al obtener estadísticas',
-      error: error.message,
+      message:
+        "No se pudo actualizar el ticket.",
+    });
+  }
+};
+
+
+// =====================================
+// DELETE /api/tickets/:id
+// =====================================
+
+exports.eliminarTicket = async (
+  req,
+  res
+) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "El identificador del ticket no es válido.",
+      });
+    }
+
+    const ticketEliminado =
+      await Ticket.findByIdAndDelete(id);
+
+    if (!ticketEliminado) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket no encontrado.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Ticket eliminado correctamente.",
+    });
+  } catch (error) {
+    console.error(
+      "Error al eliminar ticket:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "No se pudo eliminar el ticket.",
     });
   }
 };

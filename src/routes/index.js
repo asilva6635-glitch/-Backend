@@ -1,20 +1,23 @@
-const express = require('express');
+const express = require("express");
+
+const ticketRoutes = require("./ticketRoutes");
+
 const router = express.Router();
 
-const ticketRoutes = require('./ticketRoutes');
-const usuarioRoutes = require('./usuarioRoutes');
 
-// Health check
-router.get('/health', (req, res) => {
-  res.json({
+// Ruta para verificar el servidor
+router.get("/health", (req, res) => {
+  res.status(200).json({
     success: true,
-    message: 'Servidor operacional',
-    timestamp: new Date()
+    message:
+      "Servidor Help Desk operacional",
+    database: "MongoDB Atlas",
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Rutas principales
-router.use('/tickets', ticketRoutes);
-router.use('/usuarios', usuarioRoutes);
+
+// Rutas de tickets
+router.use("/tickets", ticketRoutes);
 
 module.exports = router;
