@@ -11,9 +11,9 @@ const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const HOST = "0.0.0.0";
 
-// ==========================================
-// CONFIGURACIÓN CORS
-// ==========================================
+// ======================================
+// ORÍGENES PERMITIDOS
+// ======================================
 
 const normalizarOrigen = (origen) =>
   String(origen || "")
@@ -22,45 +22,75 @@ const normalizarOrigen = (origen) =>
 
 const origenesPermitidos = [
   "http://localhost:5173",
+
   ...String(process.env.FRONTEND_URL || "")
     .split(",")
     .map(normalizarOrigen)
     .filter(Boolean),
 ];
 
-app.use(
-  cors({
-    origin(origen, callback) {
-      // Permite Postman y solicitudes sin Origin
-      if (!origen) {
-        return callback(null, true);
-      }
-
-      const origenNormalizado = normalizarOrigen(origen);
-
-      if (origenesPermitidos.includes(origenNormalizado)) {
-        return callback(null, true);
-      }
-
-      return callback(
-        new Error(`Origen no permitido por CORS: ${origen}`)
-      );
-    },
-
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-    ],
-  })
+console.log(
+  "🌐 Frontends permitidos:",
+  origenesPermitidos
 );
 
-// ==========================================
-// MIDDLEWARE
-// ==========================================
+// ======================================
+// CORS
+// ======================================
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Permite Postman, Render Health Check, etc.
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const origenNormalizado =
+      normalizarOrigen(origin);
+
+    if (
+      origenesPermitidos.includes(
+        origenNormalizado
+      )
+    ) {
+      return callback(null, true);
+    }
+
+    console.error(
+      `❌ Origen bloqueado por CORS: ${origin}`
+    );
+
+    return callback(
+      new Error("Origen no permitido por CORS")
+    );
+  },
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE",
+    "PATCH",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+  ],
+
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
+// El middleware oficial `cors` puede configurar
+// Access-Control-Allow-Origin según el origen permitido.
 app.disable("x-powered-by");
+
+// ======================================
+// BODY
+// ======================================
 
 app.use(
   express.json({
@@ -75,9 +105,9 @@ app.use(
   })
 );
 
-// ==========================================
-// ENCABEZADOS DE SEGURIDAD
-// ==========================================
+// ======================================
+// SEGURIDAD
+// ======================================
 
 app.use((req, res, next) => {
   res.setHeader(
@@ -98,28 +128,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// ==========================================
+// ======================================
 // RUTA PRINCIPAL
-// ==========================================
+// ======================================
 
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
     message:
-      "API del Sistema Help Desk funcionando correctamente",
+      "API Help Desk funcionando correctamente",
     database: "MongoDB Atlas",
   });
 });
 
-// ==========================================
-// RUTAS DE LA API
-// ==========================================
+// ======================================
+// API
+// ======================================
 
 app.use("/api", routes);
 
-// ==========================================
-// RUTA NO ENCONTRADA
-// ==========================================
+// ======================================
+// 404
+// ======================================
 
 app.use((req, res) => {
   res.status(404).json({
@@ -128,9 +158,9 @@ app.use((req, res) => {
   });
 });
 
-// ==========================================
+// ======================================
 // MANEJO DE ERRORES
-// ==========================================
+// ======================================
 
 app.use((error, req, res, next) => {
   console.error(
@@ -139,28 +169,26 @@ app.use((error, req, res, next) => {
   );
 
   if (
-    error.message &&
-    error.message.includes(
-      "Origen no permitido por CORS"
-    )
+    error.message ===
+    "Origen no permitido por CORS"
   ) {
     return res.status(403).json({
       success: false,
       message:
-        "El origen de la solicitud no está autorizado.",
+        "El frontend no está autorizado por CORS.",
     });
   }
 
   return res.status(500).json({
     success: false,
     message:
-      "Se produjo un error interno en el servidor.",
+      "Error interno del servidor.",
   });
 });
 
-// ==========================================
+// ======================================
 // INICIAR SERVIDOR
-// ==========================================
+// ======================================
 
 const iniciarServidor = async () => {
   try {
@@ -173,19 +201,11 @@ const iniciarServidor = async () => {
       );
 
       console.log(
-        `📍 Servidor: http://localhost:${PORT}`
+        `📍 Puerto: ${PORT}`
       );
 
       console.log(
-        `📖 Tickets: http://localhost:${PORT}/api/tickets`
-      );
-
-      console.log(
-        `💗 Health: http://localhost:${PORT}/api/health`
-      );
-
-      console.log(
-        "🍃 Persistencia: MongoDB Atlas"
+        "🍃 MongoDB Atlas conectado"
       );
 
       console.log("");
