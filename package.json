@@ -1,20 +1,20 @@
 {
   "name": "proyecto-helpdesk-alexandra",
   "version": "1.0.0",
+  "description": "Sistema Help Desk Full Stack - Actividad 9",
   "private": true,
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mongoose": "^9.9.1",
-    "pg": "^8.0.0",
-    "pg-hstore": "^2.0.0",
-    "sequelize": "^6.0.0",
-    "sqlite3": "^5.0.0"
+    "mongoose": "^9.9.1"
   }
 }
