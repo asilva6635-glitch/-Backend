@@ -3,39 +3,30 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const conectarMongoDB =
-  require("./config/database");
-
+const conectarMongoDB = require("./config/database");
 const routes = require("./routes");
 
 const app = express();
 
-const PORT =
-  Number(process.env.PORT) || 4000;
-
+const PORT = Number(process.env.PORT) || 4000;
 const HOST = "0.0.0.0";
 
-
-// =====================================
-// CORS
-// =====================================
+// ==========================================
+// CONFIGURACIÓN CORS
+// ==========================================
 
 const normalizarOrigen = (origen) =>
   String(origen || "")
     .trim()
     .replace(/\/+$/, "");
 
-
 const origenesPermitidos = [
   "http://localhost:5173",
-
-  ...String(
-    process.env.FRONTEND_URL || ""
-  )
+  ...String(process.env.FRONTEND_URL || "")
     .split(",")
-    .map(normalizarOrigen),
-].filter(Boolean);
-
+    .map(normalizarOrigen)
+    .filter(Boolean),
+];
 
 app.use(
   cors({
@@ -45,31 +36,18 @@ app.use(
         return callback(null, true);
       }
 
-      const origenNormalizado =
-        normalizarOrigen(origen);
+      const origenNormalizado = normalizarOrigen(origen);
 
-      if (
-        origenesPermitidos.includes(
-          origenNormalizado
-        )
-      ) {
+      if (origenesPermitidos.includes(origenNormalizado)) {
         return callback(null, true);
       }
 
       return callback(
-        new Error(
-          `Origen no permitido por CORS: ${origen}`
-        )
+        new Error(`Origen no permitido por CORS: ${origen}`)
       );
     },
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "DELETE",
-      "OPTIONS",
-    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 
     allowedHeaders: [
       "Content-Type",
@@ -78,20 +56,17 @@ app.use(
   })
 );
 
-
-// =====================================
-// SEGURIDAD Y MIDDLEWARE
-// =====================================
+// ==========================================
+// MIDDLEWARE
+// ==========================================
 
 app.disable("x-powered-by");
-
 
 app.use(
   express.json({
     limit: "20kb",
   })
 );
-
 
 app.use(
   express.urlencoded({
@@ -100,6 +75,9 @@ app.use(
   })
 );
 
+// ==========================================
+// ENCABEZADOS DE SEGURIDAD
+// ==========================================
 
 app.use((req, res, next) => {
   res.setHeader(
@@ -120,10 +98,9 @@ app.use((req, res, next) => {
   next();
 });
 
-
-// =====================================
+// ==========================================
 // RUTA PRINCIPAL
-// =====================================
+// ==========================================
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -134,17 +111,15 @@ app.get("/", (req, res) => {
   });
 });
 
-
-// =====================================
-// API
-// =====================================
+// ==========================================
+// RUTAS DE LA API
+// ==========================================
 
 app.use("/api", routes);
 
-
-// =====================================
+// ==========================================
 // RUTA NO ENCONTRADA
-// =====================================
+// ==========================================
 
 app.use((req, res) => {
   res.status(404).json({
@@ -153,19 +128,19 @@ app.use((req, res) => {
   });
 });
 
-
-// =====================================
+// ==========================================
 // MANEJO DE ERRORES
-// =====================================
+// ==========================================
 
 app.use((error, req, res, next) => {
   console.error(
-    "Error del servidor:",
+    "❌ Error del servidor:",
     error.message
   );
 
   if (
-    error.message?.includes(
+    error.message &&
+    error.message.includes(
       "Origen no permitido por CORS"
     )
   ) {
@@ -183,10 +158,9 @@ app.use((error, req, res, next) => {
   });
 });
 
-
-// =====================================
+// ==========================================
 // INICIAR SERVIDOR
-// =====================================
+// ==========================================
 
 const iniciarServidor = async () => {
   try {
@@ -211,7 +185,7 @@ const iniciarServidor = async () => {
       );
 
       console.log(
-        "🍃 Base de datos: MongoDB Atlas"
+        "🍃 Persistencia: MongoDB Atlas"
       );
 
       console.log("");
@@ -224,6 +198,5 @@ const iniciarServidor = async () => {
     process.exitCode = 1;
   }
 };
-
 
 iniciarServidor();
